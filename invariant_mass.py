@@ -1,12 +1,10 @@
-# Revised sections are marked with >>>>>>>>>>
-
 import ROOT
 from itertools import combinations
 
 file = ROOT.TFile("miniTree.root")
 tree = file.Get("outtree")
 
-# Set up reconstructed photon branches.
+# Set up reconstructed photon branches. Extract energy and momenta from the tree.
 pho_e = ROOT.std.vector('double')()
 pho_px = ROOT.std.vector('double')()
 pho_py = ROOT.std.vector('double')()
@@ -17,16 +15,16 @@ genpho_py = ROOT.std.vector('double')()
 genpho_pz = ROOT.std.vector('double')()
 genpi0_e = ROOT.std.vector('double')()
 
-# >>>>>>>>>> Added genPi0 counter branches
+
 n_class_A, n_class_B, n_class_C, n_class_D = 0, 0, 0, 0
 
-# >>>>>>>>>> Added histograms by genPi0 class
+
 M_LOW, M_HIGH, N_BINS = 0.0, 300.0, 150
 hist_by_class = {
-    "A": ROOT.TH1F("invMass_classA", "Mass (Class A, 0 π⁰); Mass (MeV); Events", N_BINS, M_LOW, M_HIGH),
-    "B": ROOT.TH1F("invMass_classB", "Mass (Class B, 1 π⁰); Mass (MeV); Events", N_BINS, M_LOW, M_HIGH),
-    "C": ROOT.TH1F("invMass_classC", "Mass (Class C, 2 π⁰); Mass (MeV); Events", N_BINS, M_LOW, M_HIGH),
-    "D": ROOT.TH1F("invMass_classD", "Mass (Class D, >2 π⁰); Mass (MeV); Events", N_BINS, M_LOW, M_HIGH),
+    "A": ROOT.TH1F("invMass_classA", "Mass (Class A, 0 pi0); Mass (MeV); Events", N_BINS, M_LOW, M_HIGH),
+    "B": ROOT.TH1F("invMass_classB", "Mass (Class B, 1 pi0); Mass (MeV); Events", N_BINS, M_LOW, M_HIGH),
+    "C": ROOT.TH1F("invMass_classC", "Mass (Class C, 2 pi0); Mass (MeV); Events", N_BINS, M_LOW, M_HIGH),
+    "D": ROOT.TH1F("invMass_classD", "Mass (Class D, >2 pi0); Mass (MeV); Events", N_BINS, M_LOW, M_HIGH),
 }
 
 # >>>>>>>>>> Added correlation and separation histograms
@@ -46,16 +44,15 @@ tree.SetBranchAddress("genPhotonPz", genpho_pz)
 tree.SetBranchAddress("genPi0E", genpi0_e)
 
 hist_all = ROOT.TH1F("invMassHist_all", "pi0 Mass (all); Mass (MeV); Events", N_BINS, M_LOW, M_HIGH)
-hist_cut = ROOT.TH1F("invMassHist_cut", "pi0 Mass with DR cut; Mass (MeV); Events", N_BINS, M_LOW, M_HIGH)
 hist_2d = ROOT.TH2F("massDR", "Mass vs DR; Mass (MeV); DR", N_BINS, M_LOW, M_HIGH, 50, 0.0, 0.2)
 hist_minDR = ROOT.TH2F("minDR", "Min DR vs Mass; Mass (MeV); Min DR", N_BINS, M_LOW, M_HIGH, 50, 0.0, 0.06)
 
-# >>>>>>>>>> Define ΔR resolution limits
-cell_size = 0.005  # 5 mm
-inner_radius = 2.15  # m
-outer_radius = 2.35  # m
-dR_inner = cell_size / inner_radius  # ≈ 0.00233
-dR_outer = cell_size / outer_radius  # ≈ 0.00213
+# Define ΔR resolution limits.
+cell_size = 0.005
+inner_radius = 2.15
+outer_radius = 2.35
+dR_inner = cell_size / inner_radius
+dR_outer = cell_size / outer_radius
 
 n_skipped, n_all, n_cut = 0, 0, 0
 n_genpi0 = 0
@@ -65,10 +62,10 @@ for evt_idx, evt in enumerate(tree):
     n_pi0 = genpi0_e.size()
     n_genpi0 += n_pi0
 
-    # >>>>>>>>>> Fill reco-vs-truth count histogram
+
     hist_pi0count_vs_nreco.Fill(n_pi0, n)
 
-    # >>>>>>>>>> Event classification
+
     if n_pi0 == 0:
         n_class_A += 1
         class_key = "A"
@@ -95,19 +92,7 @@ for evt_idx, evt in enumerate(tree):
     inv_m = float('inf')
     DR = 0.
     p_T = 0.
-    for a, b in combinations(photons, 2):
-        m = (a + b).M()
-        dr = a.DeltaR(b)
-        pt = (a + b).Pt()
-        sig = abs(m - 135)
-        if sig < inv_m:
-            inv_m = m
-            DR = dr
-            p_T = pt
 
-    if DR < (2 * 135 / p_T):
-        hist_cut.Fill(inv_m)
-        n_cut += 1
 
     hist_by_class[class_key].Fill(inv_m)
 
@@ -123,7 +108,6 @@ for evt_idx, evt in enumerate(tree):
         hist_minDR.Fill(inv_m, min_dr)
         hist_nreco_vs_minDR.Fill(n, min_dr)
 
-        # >>>>>>>>>> Fill gen-level photon pair ΔR histogram
         for j, k in combinations(range(genpho_e.size()), 2):
             g1 = ROOT.TLorentzVector()
             g2 = ROOT.TLorentzVector()
@@ -131,7 +115,6 @@ for evt_idx, evt in enumerate(tree):
             g2.SetPxPyPzE(genpho_px[k]*1e3, genpho_py[k]*1e3, genpho_pz[k]*1e3, genpho_e[k]*1e3)
             hist_genDeltaR.Fill(g1.DeltaR(g2))
 
-            # >>>>>>>>>> New: Fill ΔR from gen photon pairs forming π⁰
             if class_key in ["B", "C", "D"]:
                 pi0_candidate = g1 + g2
                 if abs(pi0_candidate.M() - 135) < 10:
@@ -142,11 +125,8 @@ for evt_idx, evt in enumerate(tree):
     hist_all.Fill(inv_m)
     n_all += 1
 
-# [Fit and plot sections unchanged...]
-
 out = ROOT.TFile("massDR_results.root", "RECREATE")
 hist_all.Write()
-hist_cut.Write()
 hist_2d.Write()
 hist_minDR.Write()
 hist_pi0count_vs_nreco.Write()
