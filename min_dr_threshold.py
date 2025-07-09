@@ -1,5 +1,4 @@
 import ROOT
-from itertools import combinations
 
 file = ROOT.TFile("miniTree.root")
 tree = file.Get("outtree")
@@ -27,7 +26,7 @@ tree.SetBranchAddress("genPhotonPz", genpho_pz)
 tree.SetBranchAddress("genPi0E", genpi0_e)
 
 # Histograms
-hist_minDR = ROOT.TH1F("minDR", "Minimum delta R", 100, 0, 0.05)
+hist_minDR = ROOT.TH1F("minDR", "Minimum delta R", 100, 0, 0.1)
 hist_energy_ratio = ROOT.TH1F("energy_ratio", "Reco / Gen Photon Energy Ratio", 100, 0, 2)
 
 # Loop over events
@@ -37,45 +36,42 @@ for i in range(tree.GetEntries()):
     reco_photons = []
     gen_photons = []
 
-    # Build reco photon list
+    # Build reco photon list (only store index and TLorentzVector)
     for j in range(pho_e.size()):
         p_reco = ROOT.TLorentzVector(pho_px[j], pho_py[j], pho_pz[j], pho_e[j])
-        reco_photons.append((p_reco, pho_e[j]))
+        reco_photons.append(p_reco)
 
-    # Build gen photon list
+    # Build gen photon list (only store index and TLorentzVector)
     for j in range(genpho_e.size()):
         p_gen = ROOT.TLorentzVector(genpho_px[j], genpho_py[j], genpho_pz[j], genpho_e[j])
-        gen_photons.append((p_gen, genpho_e[j]))
-
-    used_gen = set()
-
-    for p_reco, e_reco in reco_photons:
-        # Skip if no gen photons in event
+        gen_photons.append(p_gen)
+  
+    pairs = []
+    used_gen = []
+    
+    for i in range(len(reco_photons)):
+        dR = []
+        p_reco = reco_photons[i]
         if len(gen_photons) == 0:
             continue
-
-        min_dr = float("inf")
-        best_gen_idx = -1
-
-        # Find best match by ΔR
-        for idx, (p_gen, e_gen) in enumerate(gen_photons):
-            if idx in used_gen:
-                continue
+        for j in range(len(gen_photons)):
+            p_gen = gen_photons[j]
             dr = p_reco.DeltaR(p_gen)
-            if dr < min_dr:
-                min_dr = dr
-                best_gen_idx = idx
+            dR.append(dr)
+        min_dr = min(dR)
+        index_gen = dR.index(min_dr)
+        if dr > 0.04:
+            continue
+        if index_gen in used_gen:
+            continue
+        pairs.append((p_reco,gen_photons[index_gen]))
+        used_gen.append(index_gen)
 
-        # Fill min ΔR histogram
-        hist_minDR.Fill(min_dr)
-
-        # Fill energy ratio histogram if match found
-        if best_gen_idx != -1:
-            e_gen = gen_photons[best_gen_idx][1]
-            if e_gen > 0:
-                energy_ratio = e_reco / e_gen
-                hist_energy_ratio.Fill(energy_ratio)
-                used_gen.add(best_gen_idx)
+    for reco, gen in pairs:
+        dr = reco.DeltaR(gen)
+        hist_minDR.Fill(dr)
+        e_ratio = reco.E() / gen.E() if gen.E() >0 else 0
+        hist_energy_ratio.Fill(e_ratio)
 
 # Draw and save ΔR histogram
 canvas = ROOT.TCanvas("canvas", "Minimum Delta R Histogram", 800, 600)
@@ -101,3 +97,9 @@ out_file.Close()
 
 # Close input file
 file.Close()
+# Close input file
+file.Close()
+file.Close()
+# Close input file
+file.Close()
+
