@@ -1,99 +1,209 @@
+"""
+    This script pairs gen photons and matches them to reconstructed photons. The 2d plot of nReco vs. ΔR is generated,
+    showing the number of matched reconstructed photons for each pair of gen photons.
+"""
 import ROOT
+import numpy as np
 from array import array
+ROOT.gStyle.SetOptStat("eMRuo")
 
-# Open the ROOT file and get the tree
-file = ROOT.TFile("miniTree.root")
+# Open ROOT file and access the tree
+file = ROOT.TFile("miniTree_1M.root")
 tree = file.Get("outtree")
 
-# Set up vectors for branches
+# Define vectors for branches
 pho_e = ROOT.std.vector('double')()
+pho_px = ROOT.std.vector('double')()
+pho_py = ROOT.std.vector('double')()
+pho_pz = ROOT.std.vector('double')()
+genpho_e = ROOT.std.vector('double')()
 genpho_px = ROOT.std.vector('double')()
 genpho_py = ROOT.std.vector('double')()
 genpho_pz = ROOT.std.vector('double')()
-genpho_e = ROOT.std.vector('double')()
+genpi0_e = ROOT.std.vector('double')()
+genpi0_m = ROOT.std.vector('double')()
 
+# Set branch addresses
 tree.SetBranchAddress("photonE", pho_e)
+tree.SetBranchAddress("photonPx", pho_px)
+tree.SetBranchAddress("photonPy", pho_py)
+tree.SetBranchAddress("photonPz", pho_pz)
+tree.SetBranchAddress("genPhotonE", genpho_e)
 tree.SetBranchAddress("genPhotonPx", genpho_px)
 tree.SetBranchAddress("genPhotonPy", genpho_py)
 tree.SetBranchAddress("genPhotonPz", genpho_pz)
-tree.SetBranchAddress("genPhotonE", genpho_e)
+tree.SetBranchAddress("genPi0E", genpi0_e)
+tree.SetBranchAddress("genPi0M", genpi0_m)
 
-deltaR_even = []
-nReco_even = []
-deltaR_odd = []
-nReco_odd = []
+# Constants
+PI0_MASS = 0.135  # GeV
+DELTA_R_CUT = 0.5
+MASS_WINDOW = 0.05  # 50 MeV mass tolerance for π⁰
+cell_size = 0.005
+R_in = 2.15  # Inner ECAL radius in meters
+R_outer = 2.35
+min_deltaR_in= np.sqrt((cell_size * 3/R_in)**2 + (0.5*cell_size * 3/R_in)**2)  # Minimum ΔR based on ECAL geometry
+min_deltaR_outer = np.sqrt((cell_size * 3/R_outer)**2 + (0.5*cell_size * 3/R_outer)**2)
+# Lists for plotting
+deltaR = []
+nReco = []
+reco_theta = []
+# Optional histogram for valid ΔR between gen photons
+hist_valid_dR = ROOT.TH1F("genPhotonDeltaR", "ΔR of gen photon pairs (π⁰ candidates)", 100, 0, 0.5)
+for i_event in range(tree.GetEntries()):
+    tree.GetEntry(i_event)
 
-# Loop over events
-for i in range(tree.GetEntries()):
-    tree.GetEntry(i)
-    n_reco = pho_e.size()
-
-    # Skip events with fewer than 2 gen photons
-    if genpho_e.size() < 2:
+    if len(genpho_e) == 0 or len(pho_e) == 0 or len(genpi0_m) == 0:
         continue
 
-    # Build list of TLorentzVectors for gen photons
-    genpho_all = []
-    for j in range(genpho_e.size()):
-        p = ROOT.TLorentzVector(genpho_px[j], genpho_py[j], genpho_pz[j], genpho_e[j])
-        genpho_all.append(p)
+    # Construct TLorentzVectors
+    reco_photons = [ROOT.TLorentzVector(pho_px[j], pho_py[j], pho_pz[j], pho_e[j]) for j in range(pho_e.size())]
+    gen_photons = [ROOT.TLorentzVector(genpho_px[j], genpho_py[j], genpho_pz[j], genpho_e[j]) for j in range(genpho_e.size())]
 
-    genpho_remaining = genpho_all.copy()
+    for reco in reco_photons:
+        theta = reco.Theta()
+        reco_theta.append(theta)
+min_theta = min(reco_theta)
+max_theta = max(reco_theta)
+# Loop over events
+for i_event in range(tree.GetEntries()):
+    tree.GetEntry(i_event)
 
-    while len(genpho_remaining) >= 2:
-        min_dm = float('inf')
-        best_pair = None
-        best_indices = (None, None)
+    if len(genpho_e) == 0 or len(pho_e) == 0 or len(genpi0_m) == 0:
+        continue
 
-        for m in range(len(genpho_remaining)):
-            for n in range(m + 1, len(genpho_remaining)):
-                p1 = genpho_remaining[m]
-                p2 = genpho_remaining[n]
-                inv_mass = (p1 + p2).M()
-                dm = abs(inv_mass - 0.135)  # π⁰ mass in GeV
-                if dm < min_dm:
-                    min_dm = dm
-                    best_pair = (p1, p2)
-                    best_indices = (m, n)
+    # Construct TLorentzVectors
+    reco_photons = [ROOT.TLorentzVector(pho_px[j], pho_py[j], pho_pz[j], pho_e[j]) for j in range(pho_e.size())]
+    gen_photons = [ROOT.TLorentzVector(genpho_px[j], genpho_py[j], genpho_pz[j], genpho_e[j]) for j in range(genpho_e.size())]        
 
-        # If best pair found, compute ΔR and store it
-        if best_pair:
-            inv_mass = (best_pair[0] + best_pair[1]).M()
-            delta_r = best_pair[0].DeltaR(best_pair[1])
-            if abs(inv_mass - 0.135) < 0.005 and delta_r < 0.5:  # Tighter mass window and ΔR cut
-                if n_reco % 2 == 0:
-                    deltaR_even.append(delta_r)
-                    nReco_even.append(n_reco)
-                else:
-                    deltaR_odd.append(delta_r)
-                    nReco_odd.append(n_reco)
-            # Remove both photons from list
-            for idx in sorted(best_indices, reverse=True):
-                del genpho_remaining[idx]
-        else:
-            break
+    used_gen_indices = set()
+    used_pi0_indices = set()
 
-# Plotting
-graph_even = ROOT.TGraph(len(deltaR_even), array('f', deltaR_even), array('f', nReco_even))
-graph_odd = ROOT.TGraph(len(deltaR_odd), array('f', deltaR_odd), array('f', nReco_odd))
+    # Pair gen photons with π⁰ candidates
+    for i in range(len(gen_photons)):
+        if i in used_gen_indices:
+            continue
+        for j in range(i + 1, len(gen_photons)):
+            theta = gen_photons[i].Theta()
+            if theta < min_theta or theta > max_theta:
+                continue
 
-graph_even.SetMarkerStyle(20)
-graph_even.SetMarkerColor(ROOT.kBlue)
-graph_even.SetTitle("nReco vs. ΔR of π⁰-like gen photon pairs")
+            if j in used_gen_indices:
+                continue
 
-graph_odd.SetMarkerStyle(20)
-graph_odd.SetMarkerColor(ROOT.kRed)
+            p1 = gen_photons[i]
+            p2 = gen_photons[j]
+            dr = p1.DeltaR(p2)
+            pair_mass = (p1 + p2).M()
 
-canvas = ROOT.TCanvas("canvas", "nReco vs. Gen ΔR", 800, 600)
-graph_even.Draw("AP")
-graph_odd.Draw("P same")
+            # ΔR and mass window cuts
+            if dr > DELTA_R_CUT:
+                continue
+            if abs(pair_mass - PI0_MASS) > MASS_WINDOW:
+                continue
 
-graph_even.GetXaxis().SetTitle("ΔR between gen photon pairs (π⁰ candidates)")
-graph_even.GetYaxis().SetTitle("Number of reconstructed photons")
+            # Match pair to closest gen π⁰ by mass
+            min_mass_diff = float('inf')
+            best_pi0_idx = -1
+            for k in range(len(genpi0_m)):
+                if k in used_pi0_indices:
+                    continue
+                mass_diff = abs(pair_mass - genpi0_m[k])
+                if mass_diff < min_mass_diff:
+                    min_mass_diff = mass_diff
+                    best_pi0_idx = k
 
-legend = ROOT.TLegend(0.65, 0.75, 0.88, 0.88)
-legend.AddEntry(graph_even, "Even nReco", "p")
-legend.AddEntry(graph_odd, "Odd nReco", "p")
+            if best_pi0_idx >= 0:
+                used_pi0_indices.add(best_pi0_idx)
+                used_gen_indices.update([i, j])
+
+                # Match each gen photon to reco photon
+                used_reco_indices = set()
+                n_reco = 0
+                for gen_photon in [p1, p2]:
+                    best_dr = float('inf')
+                    best_reco_idx = -1
+                    for idx, reco_photon in enumerate(reco_photons):
+                        if idx in used_reco_indices:
+                            continue
+                        dr = reco_photon.DeltaR(gen_photon)
+                        if dr < best_dr:
+                            best_dr = dr
+                            best_reco_idx = idx
+                    if best_dr < 0.04 and best_reco_idx != -1:
+                        n_reco += 1
+                        used_reco_indices.add(best_reco_idx)
+
+                deltaR.append(p1.DeltaR(p2))
+                nReco.append(n_reco)
+                hist_valid_dR.Fill(p1.DeltaR(p2))
+
+max_dr = max(deltaR)
+# Split data into even/odd reco photon count
+deltaR_even, nReco_even = [], []
+deltaR_odd, nReco_odd = [], []
+
+for dr, nr in zip(deltaR, nReco):
+    if nr % 2 == 0:
+        deltaR_even.append(dr)
+        nReco_even.append(nr)
+    else:
+        deltaR_odd.append(dr)
+        nReco_odd.append(nr)
+
+# Create TGraphs
+hist2d = ROOT.TH2F("hist2d", "nReco vs. #DeltaR between gen photon pairs (5mm x 5mm)",
+                   50, 0, 0.03,   # ΔR bins
+                   5, -0.5, 4.5)  # nReco bins (0 to 4)
+
+# Fill TH2F
+for dr, nr in zip(deltaR, nReco):
+    
+    hist2d.Fill(dr, nr)
+
+# Draw 2D histogram
+canvas = ROOT.TCanvas("canvas", "nReco vs. Gen #DeltaR", 800, 600)
+hist2d.GetXaxis().SetTitle("#DeltaR between gen photon pairs (pi^{0} candidates)")
+hist2d.GetYaxis().SetTitle("Number of matched reco photons")
+hist2d.SetStats(0)
+hist2d.Draw("COLZ")
+
+profile = hist2d.ProfileX()
+profile.SetLineColor(ROOT.kRed + 1)
+profile.SetLineWidth(2)
+profile.Draw("same")  # Overlay on 2D histogram
+
+# Draw vertical resolution lines
+line_inner = ROOT.TLine(min_deltaR_in, -0.5, min_deltaR_in, 4.5)
+line_outer = ROOT.TLine(min_deltaR_outer, -0.5, min_deltaR_outer, 4.5)
+line_inner.SetLineColor(ROOT.kGreen+2)
+line_inner.SetLineStyle(2)
+line_inner.SetLineWidth(2)
+line_outer.SetLineColor(ROOT.kMagenta+2)
+line_outer.SetLineStyle(2)
+line_outer.SetLineWidth(2)
+line_inner.Draw()
+line_outer.Draw()
+
+# Add legend
+legend = ROOT.TLegend(0.60, 0.75, 0.88, 0.88)
+legend.AddEntry(line_inner, f"Inner ECAL #DeltaR ({min_deltaR_in:.3})", "l")
+legend.AddEntry(line_outer, f"Outer ECAL #DeltaR ({min_deltaR_outer:.3})", "l")
 legend.Draw()
 
-canvas.SaveAs("nReco_vs_pi0GenDeltaR.png")
+canvas.SaveAs("th2_nReco_vs_deltaR.png")
+
+            # Pairing logic explanation:
+            # For each unique pair of gen photons (i, j):
+            #   - Only consider pairs where both photons are not already used in another pair.
+            #   - Calculate the angle theta of the first photon and require it to be within the range of reco photon thetas.
+            #   - Compute the ΔR (angular separation) between the two gen photons.
+            #   - Compute the invariant mass of the pair.
+            #   - Apply two selection cuts:
+            #       1. ΔR must be less than DELTA_R_CUT (e.g., 0.5).
+            #       2. The pair mass must be within MASS_WINDOW (e.g., 0.05 GeV) of the nominal π⁰ mass (PI0_MASS).
+            #   - For pairs passing both cuts, find the closest unused gen π⁰ candidate by mass.
+            #   - If a gen π⁰ is found, mark both gen photons and the π⁰ as used (so they can't be reused).
+            #   - For each photon in the selected pair, match to the closest unused reco photon (ΔR < 0.04, each reco used once).
+            #   - Count the number of matched reco photons (n_reco) for the pair.
+            #   - Store ΔR between the gen photon pair and n_reco for later plotting.
