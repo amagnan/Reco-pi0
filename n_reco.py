@@ -8,7 +8,7 @@ from array import array
 ROOT.gStyle.SetOptStat("eMRuo")
 
 # Open ROOT file and access the tree
-file = ROOT.TFile("miniTree_1M.root")
+file = ROOT.TFile("miniTree.root")
 tree = file.Get("outtree")
 
 # Define vectors for branches
@@ -35,13 +35,14 @@ tree.SetBranchAddress("genPhotonPz", genpho_pz)
 tree.SetBranchAddress("genPi0E", genpi0_e)
 tree.SetBranchAddress("genPi0M", genpi0_m)
 
-# Constants
+# Constants:
 PI0_MASS = 0.135  # GeV
 DELTA_R_CUT = 0.5
 MASS_WINDOW = 0.05  # 50 MeV mass tolerance for π⁰
 cell_size = 0.005
 R_in = 2.15  # Inner ECAL radius in meters
 R_outer = 2.35
+# Given that the PF algorithm identify clusters, the cell size in min delta R calulation should be multiplied by 3.
 min_deltaR_in= np.sqrt((cell_size * 3/R_in)**2 + (0.5*cell_size * 3/R_in)**2)  # Minimum ΔR based on ECAL geometry
 min_deltaR_outer = np.sqrt((cell_size * 3/R_outer)**2 + (0.5*cell_size * 3/R_outer)**2)
 # Lists for plotting
@@ -63,13 +64,14 @@ for i_event in range(tree.GetEntries()):
     for reco in reco_photons:
         theta = reco.Theta()
         reco_theta.append(theta)
+
 min_theta = min(reco_theta)
 max_theta = max(reco_theta)
 # Loop over events
 for i_event in range(tree.GetEntries()):
     tree.GetEntry(i_event)
 
-    if len(genpho_e) == 0 or len(pho_e) == 0 or len(genpi0_m) == 0:
+    if len(genpho_e) == 0 or len(genpi0_m) == 0:
         continue
 
     # Construct TLorentzVectors
@@ -84,10 +86,12 @@ for i_event in range(tree.GetEntries()):
         if i in used_gen_indices:
             continue
         for j in range(i + 1, len(gen_photons)):
-            theta = gen_photons[i].Theta()
-            if theta < min_theta or theta > max_theta:
+            theta1 = gen_photons[i].Theta()
+            theta2 = gen_photons[j].Theta()
+            if theta1 < min_theta or theta1 > max_theta:
                 continue
-
+            if theta2 < min_theta or theta2 > max_theta:
+                continue
             if j in used_gen_indices:
                 continue
 
@@ -193,17 +197,3 @@ legend.Draw()
 
 canvas.SaveAs("th2_nReco_vs_deltaR.png")
 
-            # Pairing logic explanation:
-            # For each unique pair of gen photons (i, j):
-            #   - Only consider pairs where both photons are not already used in another pair.
-            #   - Calculate the angle theta of the first photon and require it to be within the range of reco photon thetas.
-            #   - Compute the ΔR (angular separation) between the two gen photons.
-            #   - Compute the invariant mass of the pair.
-            #   - Apply two selection cuts:
-            #       1. ΔR must be less than DELTA_R_CUT (e.g., 0.5).
-            #       2. The pair mass must be within MASS_WINDOW (e.g., 0.05 GeV) of the nominal π⁰ mass (PI0_MASS).
-            #   - For pairs passing both cuts, find the closest unused gen π⁰ candidate by mass.
-            #   - If a gen π⁰ is found, mark both gen photons and the π⁰ as used (so they can't be reused).
-            #   - For each photon in the selected pair, match to the closest unused reco photon (ΔR < 0.04, each reco used once).
-            #   - Count the number of matched reco photons (n_reco) for the pair.
-            #   - Store ΔR between the gen photon pair and n_reco for later plotting.

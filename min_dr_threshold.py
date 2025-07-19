@@ -1,3 +1,8 @@
+"""
+This script finds the delta R threshold for matching reco-photons to gen-photons.
+It also calculates the energy ratio of reco photons to the total energy of the matched gen photon pairs.
+"""
+
 import ROOT
 ROOT.gStyle.SetOptStat("eMRuo")
 
@@ -30,7 +35,7 @@ tree.SetBranchAddress("genPi0E", genpi0_e)
 hist_minDR = ROOT.TH1F("minDR", "Minimum delta R", 100, 0, 0.1)
 hist_energy_ratio = ROOT.TH1F("energy_ratio", "Reco / Gen Photon Energy Ratio", 100, 0, 2)
 reco_theta = []
-# Optional histogram for valid ΔR between gen photons
+# Find the minimum and maximum theta values for reco photons.
 for i_event in range(tree.GetEntries()):
     tree.GetEntry(i_event)
 
@@ -76,8 +81,13 @@ for i in range(tree.GetEntries()):
             continue
         for j_gen in range(len(gen_photons)):
             p_gen = gen_photons[j_gen]
+            theta = p_gen.Theta()
+            if theta < min_theta or theta > max_theta:
+                continue
             dr = p_reco.DeltaR(p_gen)
             dR.append(dr)
+        if not dR:
+            continue  # Skip if no valid gen photons for this reco photon
         min_dr = min(dR)
         index_gen = dR.index(min_dr)
         #if min_dr > 0.04:  # Use min_dr here, not dr
@@ -88,6 +98,9 @@ for i in range(tree.GetEntries()):
         used_gen.append(index_gen)
 
     for reco, gen in pairs:
+        theta = gen.Theta()
+        if theta < min_theta or theta > max_theta:
+            continue
         dr = reco.DeltaR(gen)
         hist_minDR.Fill(dr)
         e_ratio = reco.E() / gen.E() if gen.E() > 0 else 0
@@ -131,6 +144,9 @@ if len(gen_photons) >= 2:
             continue
         gen1 = gen_photons[i]
         gen2 = gen_photons[i+1]
+        theta2 = gen_photons[i+1].Theta()
+        if theta2 < min_theta or theta2 > max_theta:
+            continue
         sum_genE = gen1.E() + gen2.E()
 
         # Find reco photons matched to either gen1 or gen2

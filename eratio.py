@@ -1,3 +1,10 @@
+"""
+This script match the gen-photon pairs and find the corresponding reco-photon pairs.
+A theta cut is applied to the gen-photon to ensure they are within the range of reco-photon angles.
+It calculates the energy ratio of reco photons to the total energy of the matched gen photon pairs.
+It also plots the energy ratio histograms for cases with one and two reco photons.
+"""
+ 
 import ROOT
 import numpy as np
 from array import array
@@ -61,7 +68,7 @@ max_theta = max(reco_theta)
 for i_event in range(tree.GetEntries()):
     tree.GetEntry(i_event)
 
-    if len(genpho_e) < 2 or len(pho_e) == 0 or len(genpi0_m) == 0:
+    if len(genpho_e) < 2 or len(genpi0_m) == 0:
         continue
 
     # Create TLorentzVectors
@@ -75,8 +82,15 @@ for i_event in range(tree.GetEntries()):
     for i in range(len(gen_photons)):
         if i in used_gen_indices:
             continue
+        theta1 = gen_photons[i].Theta()
+        if theta1 < min_theta or theta1 > max_theta:
+            continue
         for j in range(i + 1, len(gen_photons)):
             if j in used_gen_indices:
+                continue
+            
+            theta2 = gen_photons[j].Theta()
+            if theta2 < min_theta or theta2 > max_theta:
                 continue
 
             p1 = gen_photons[i]
@@ -85,7 +99,7 @@ for i_event in range(tree.GetEntries()):
             if abs(pair_mass - PI0_MASS) > MASS_WINDOW:
                 continue
 
-            # Match to gen π⁰
+            # Match to genpi0 by mass.
             min_mass_diff = float('inf')
             best_pi0_idx = -1
             for k in range(len(genpi0_m)):
@@ -105,9 +119,6 @@ for i_event in range(tree.GetEntries()):
                 used_reco_indices = set()
                 for gen_photon in [p1, p2]:
                     theta = gen_photon.Theta()
-                    # Apply theta cut
-                    if theta < min_theta or theta > max_theta:
-                        continue
                     best_dr = float('inf')
                     best_reco_idx = -1
                     for idx, reco_photon in enumerate(reco_photons):
