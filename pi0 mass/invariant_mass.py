@@ -9,6 +9,7 @@ It classifies events into four categories:
 and generates histograms for each class.
 """
 import ROOT
+import numpy as np
 from itertools import combinations
 
 file = ROOT.TFile("miniTree.root")
@@ -61,7 +62,6 @@ tree.SetBranchAddress("genPi0Py", genpi0_py)
 tree.SetBranchAddress("genPi0Pz", genpi0_pz)
 
 hist_all = ROOT.TH1F("invMassHist_all", "pi0 Mass (all); Mass (MeV); Events", N_BINS, M_LOW, M_HIGH)
-hist_cut = ROOT.TH1F("invMassHist_cut", "pi0 Mass with DR cut; Mass (MeV); Events", N_BINS, M_LOW, M_HIGH)
 hist_2d = ROOT.TH2F("massDR", "Mass vs DR; Mass (MeV); DR", N_BINS, M_LOW, M_HIGH, 50, 0.0, 0.2)
 hist_minDR = ROOT.TH2F("minDR", "Min DR vs Mass; Mass (MeV); Min DR", N_BINS, M_LOW, M_HIGH, 50, 0.0, 0.06)
 
@@ -70,7 +70,7 @@ cell_size = 0.005  # 5 mm
 R_in = 2.15  # m
 R_outer = 2.35  # m
 # Given that the PF algorithm identify clusters, the cell size in min delta R calulation should be multiplied by 3.
-min_deltaR_in= np.sqrt((cell_size * 3/R_in)**2 + (0.5*cell_size * 3/R_in)**2)  # Minimum ΔR based on ECAL geometry
+min_deltaR_in= np.sqrt((cell_size * 3/R_in)**2 + (0.5*cell_size * 3/R_in)**2)  # Minimum ΔR based on ECAL geometry.
 min_deltaR_outer = np.sqrt((cell_size * 3/R_outer)**2 + (0.5*cell_size * 3/R_outer)**2)
 
 n_skipped, n_all, n_cut = 0, 0, 0
@@ -121,10 +121,6 @@ for evt_idx, evt in enumerate(tree):
             DR = dr
             p_T = pt
 
-    if DR < (2 * 135 / p_T):
-        hist_cut.Fill(inv_m)
-        n_cut += 1
-
     hist_by_class[class_key].Fill(inv_m)
 
     min_dr = float('inf')
@@ -139,7 +135,6 @@ for evt_idx, evt in enumerate(tree):
         hist_minDR.Fill(inv_m, min_dr)
         hist_nreco_vs_minDR.Fill(n, min_dr)
 
-        # >>>>>>>>>> Fill gen-level photon pair ΔR histogram
         for j, k in combinations(range(genpho_e.size()), 2):
             g1 = ROOT.TLorentzVector()
             g2 = ROOT.TLorentzVector()
@@ -147,7 +142,6 @@ for evt_idx, evt in enumerate(tree):
             g2.SetPxPyPzE(genpho_px[k]*1e3, genpho_py[k]*1e3, genpho_pz[k]*1e3, genpho_e[k]*1e3)
             hist_genDeltaR.Fill(g1.DeltaR(g2))
 
-            # >>>>>>>>>> New: Fill ΔR from gen photon pairs forming π⁰
             if class_key in ["B", "C", "D"]:
                 pi0_candidate = g1 + g2
                 if abs(pi0_candidate.M() - 135) < 10:
@@ -170,7 +164,6 @@ for evt_idx, evt in enumerate(tree):
                     if abs(m - 135) < 10:
                         merged_photon_found = True
                         print(f"Event {evt_idx}: Merged photon candidate found. Reco E={reco.E():.1f} MeV, Gen pi0 E={genpi0_p4.E():.1f} MeV, ΔR={delta_r:.3f}, Pair mass={m:.1f} MeV")
-                        # Optionally, fill a histogram or store info here
                         break
             if merged_photon_found:
                 break
@@ -181,11 +174,8 @@ for evt_idx, evt in enumerate(tree):
     hist_all.Fill(inv_m)
     n_all += 1
 
-# [Fit and plot sections unchanged...]
-
 out = ROOT.TFile("massDR_results.root", "RECREATE")
 hist_all.Write()
-hist_cut.Write()
 hist_2d.Write()
 hist_minDR.Write()
 hist_pi0count_vs_nreco.Write()
@@ -196,7 +186,7 @@ for hist in hist_by_class.values():
     hist.Write()
 out.Close()
 
-# >>>>>>>>>> Additional plots
+
 c_pi0_vs_reco = ROOT.TCanvas("c_pi0_vs_reco", "gen π⁰ count vs Reco photons", 800, 600)
 hist_pi0count_vs_nreco.Draw("COLZ")
 c_pi0_vs_reco.SaveAs("pi0_vs_reco_photons.png")
