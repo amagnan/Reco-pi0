@@ -1,6 +1,7 @@
 """
     This script pairs gen photons and matches them to reconstructed photons. The 2d plot of nReco vs. ΔR is generated,
     showing the number of matched reconstructed photons for each pair of gen photons.
+    It also visualizes the energy and theta distribution of matched gen and reco photons.
 """
 import ROOT
 import numpy as np
@@ -37,7 +38,6 @@ tree.SetBranchAddress("genPi0M", genpi0_m)
 
 # Constants:
 PI0_MASS = 0.135  # GeV
-DELTA_R_CUT = 0.5
 MASS_WINDOW = 0.05  # 50 MeV mass tolerance for π⁰
 cell_size = 0.005
 R_in = 2.15  # Inner ECAL radius in meters
@@ -51,6 +51,10 @@ nReco = []
 reco_theta = []
 # Optional histogram for valid ΔR between gen photons
 hist_valid_dR = ROOT.TH1F("genPhotonDeltaR", "ΔR of gen photon pairs (π⁰ candidates)", 100, 0, 0.5)
+hist_gen_energy = ROOT.TH1F("genPhotonEnergy", "Gen Photon Energy;E [GeV];Counts", 100, 0, 5)
+hist_reco_energy = ROOT.TH1F("recoPhotonEnergy", "Reco Photon Energy;E [GeV];Counts", 100, 0, 5)
+hist_gen_theta = ROOT.TH1F("genPhotonTheta", "Gen Photon Theta;Theta [rad];Counts", 100, 0, np.pi)
+hist_reco_theta = ROOT.TH1F("recoPhotonTheta", "Reco Photon Theta;Theta [rad];Counts", 100, 0, np.pi)
 for i_event in range(tree.GetEntries()):
     tree.GetEntry(i_event)
 
@@ -100,9 +104,6 @@ for i_event in range(tree.GetEntries()):
             dr = p1.DeltaR(p2)
             pair_mass = (p1 + p2).M()
 
-            # ΔR and mass window cuts
-            if dr > DELTA_R_CUT:
-                continue
             if abs(pair_mass - PI0_MASS) > MASS_WINDOW:
                 continue
 
@@ -125,6 +126,8 @@ for i_event in range(tree.GetEntries()):
                 used_reco_indices = set()
                 n_reco = 0
                 for gen_photon in [p1, p2]:
+                    hist_gen_energy.Fill(gen_photon.E())
+                    hist_gen_theta.Fill(gen_photon.Theta())
                     best_dr = float('inf')
                     best_reco_idx = -1
                     for idx, reco_photon in enumerate(reco_photons):
@@ -137,25 +140,14 @@ for i_event in range(tree.GetEntries()):
                     if best_dr < 0.04 and best_reco_idx != -1:
                         n_reco += 1
                         used_reco_indices.add(best_reco_idx)
+                        hist_reco_energy.Fill(reco_photons[best_reco_idx].E())
+                        hist_reco_theta.Fill(reco_photons[best_reco_idx].Theta())
 
                 deltaR.append(p1.DeltaR(p2))
                 nReco.append(n_reco)
                 hist_valid_dR.Fill(p1.DeltaR(p2))
 
 max_dr = max(deltaR)
-# Split data into even/odd reco photon count
-deltaR_even, nReco_even = [], []
-deltaR_odd, nReco_odd = [], []
-
-for dr, nr in zip(deltaR, nReco):
-    if nr % 2 == 0:
-        deltaR_even.append(dr)
-        nReco_even.append(nr)
-    else:
-        deltaR_odd.append(dr)
-        nReco_odd.append(nr)
-
-# Create TGraphs
 hist2d = ROOT.TH2F("hist2d", "nReco vs. #DeltaR between gen photon pairs (5mm x 5mm)",
                    50, 0, 0.03,   # ΔR bins
                    5, -0.5, 4.5)  # nReco bins (0 to 4)
@@ -197,3 +189,36 @@ legend.Draw()
 
 canvas.SaveAs("th2_nReco_vs_deltaR.png")
 
+# Draw and save overlaid energy histogram
+canvas_energy = ROOT.TCanvas("canvas_energy", "Gen vs Reco Photon Energy", 800, 600)
+hist_gen_energy.SetLineColor(ROOT.kBlue)
+hist_gen_energy.SetLineWidth(2)
+hist_gen_energy.SetTitle("Gen vs Reco Photon Energy")
+hist_gen_energy.GetXaxis().SetTitle("Photon Energy [GeV]")
+hist_gen_energy.GetYaxis().SetTitle("Counts")
+hist_gen_energy.Draw("HIST")
+hist_reco_energy.SetLineColor(ROOT.kRed)
+hist_reco_energy.SetLineWidth(2)
+hist_reco_energy.Draw("HIST SAME")
+legend_energy = ROOT.TLegend(0.65, 0.75, 0.88, 0.88)
+legend_energy.AddEntry(hist_gen_energy, "Gen Photon", "l")
+legend_energy.AddEntry(hist_reco_energy, "Reco Photon", "l")
+legend_energy.Draw()
+canvas_energy.SaveAs("hist_energy_gen_vs_reco.png")
+
+# Draw and save overlaid theta histogram
+canvas_theta = ROOT.TCanvas("canvas_theta", "Gen vs Reco Photon Theta", 800, 600)
+hist_gen_theta.SetLineColor(ROOT.kBlue)
+hist_gen_theta.SetLineWidth(2)
+hist_gen_theta.SetTitle("Gen vs Reco Photon Theta")
+hist_gen_theta.GetXaxis().SetTitle("Photon Theta [rad]")
+hist_gen_theta.GetYaxis().SetTitle("Counts")
+hist_gen_theta.Draw("HIST")
+hist_reco_theta.SetLineColor(ROOT.kRed)
+hist_reco_theta.SetLineWidth(2)
+hist_reco_theta.Draw("HIST SAME")
+legend_theta = ROOT.TLegend(0.65, 0.75, 0.88, 0.88)
+legend_theta.AddEntry(hist_gen_theta, "Gen Photon", "l")
+legend_theta.AddEntry(hist_reco_theta, "Reco Photon", "l")
+legend_theta.Draw()
+canvas_theta.SaveAs("hist_theta_gen_vs_reco.png")
