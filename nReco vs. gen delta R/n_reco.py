@@ -49,10 +49,11 @@ min_deltaR_outer = np.sqrt((cell_size * 3/R_outer)**2 + (0.5*cell_size * 3/R_out
 deltaR = []
 nReco = []
 reco_theta = []
+max_e = 19
 # Optional histogram for valid ΔR between gen photons
 hist_valid_dR = ROOT.TH1F("genPhotonDeltaR", "ΔR of gen photon pairs (π⁰ candidates)", 100, 0, 0.5)
-hist_gen_energy = ROOT.TH1F("genPhotonEnergy", "Gen Photon Energy;E [GeV];Counts", 100, 0, 5)
-hist_reco_energy = ROOT.TH1F("recoPhotonEnergy", "Reco Photon Energy;E [GeV];Counts", 100, 0, 5)
+hist_gen_energy = ROOT.TH1F("genPhotonEnergy", "Gen Photon Energy;E [GeV];Counts", 100, 0, max_e)
+hist_reco_energy = ROOT.TH1F("recoPhotonEnergy", "Reco Photon Energy;E [GeV];Counts", 100, 0, max_e)
 hist_gen_theta = ROOT.TH1F("genPhotonTheta", "Gen Photon Theta;Theta [rad];Counts", 100, 0, np.pi)
 hist_reco_theta = ROOT.TH1F("recoPhotonTheta", "Reco Photon Theta;Theta [rad];Counts", 100, 0, np.pi)
 for i_event in range(tree.GetEntries()):
@@ -71,6 +72,8 @@ for i_event in range(tree.GetEntries()):
 
 min_theta = min(reco_theta)
 max_theta = max(reco_theta)
+theta_cut_failed = 0
+theta_cut_passed = 0
 # Loop over events
 for i_event in range(tree.GetEntries()):
     tree.GetEntry(i_event)
@@ -92,10 +95,16 @@ for i_event in range(tree.GetEntries()):
         for j in range(i + 1, len(gen_photons)):
             theta1 = gen_photons[i].Theta()
             theta2 = gen_photons[j].Theta()
+            # Count gen photons for theta cut
+
             if theta1 < min_theta or theta1 > max_theta:
+                theta_cut_failed += 1
                 continue
             if theta2 < min_theta or theta2 > max_theta:
+                theta_cut_failed += 1
                 continue
+            theta_cut_passed += 2
+
             if j in used_gen_indices:
                 continue
 
@@ -182,43 +191,63 @@ line_inner.Draw()
 line_outer.Draw()
 
 # Add legend
-legend = ROOT.TLegend(0.60, 0.75, 0.88, 0.88)
+legend = ROOT.TLegend(0.35, 0.75, 0.65, 0.88)
 legend.AddEntry(line_inner, f"Inner ECAL #DeltaR ({min_deltaR_in:.3})", "l")
 legend.AddEntry(line_outer, f"Outer ECAL #DeltaR ({min_deltaR_outer:.3})", "l")
 legend.Draw()
 
 canvas.SaveAs("th2_nReco_vs_deltaR.png")
 
-# Draw and save overlaid energy histogram
+# After filling histograms, set the x-axis range to the maximum value
+# Find the maximum energy value from both histograms to cover all data
+max_gen_e = hist_gen_energy.GetBinLowEdge(hist_gen_energy.GetNbinsX()) + hist_gen_energy.GetBinWidth(hist_gen_energy.GetNbinsX())
+max_reco_e = hist_reco_energy.GetBinLowEdge(hist_reco_energy.GetNbinsX()) + hist_reco_energy.GetBinWidth(hist_reco_energy.GetNbinsX())
+max_e = max(max_gen_e, max_reco_e)
+
+hist_gen_energy.GetXaxis().SetRangeUser(0, max_e)
+hist_reco_energy.GetXaxis().SetRangeUser(0, max_e)
+
+# Draw and save overlaid energy histogram with error bars
 canvas_energy = ROOT.TCanvas("canvas_energy", "Gen vs Reco Photon Energy", 800, 600)
 hist_gen_energy.SetLineColor(ROOT.kBlue)
 hist_gen_energy.SetLineWidth(2)
 hist_gen_energy.SetTitle("Gen vs Reco Photon Energy")
 hist_gen_energy.GetXaxis().SetTitle("Photon Energy [GeV]")
 hist_gen_energy.GetYaxis().SetTitle("Counts")
-hist_gen_energy.Draw("HIST")
+hist_gen_energy.Draw("E")  # "E" option draws error bars
 hist_reco_energy.SetLineColor(ROOT.kRed)
 hist_reco_energy.SetLineWidth(2)
-hist_reco_energy.Draw("HIST SAME")
-legend_energy = ROOT.TLegend(0.65, 0.75, 0.88, 0.88)
+hist_reco_energy.Draw("E SAME")  # "E SAME" overlays with error bars
+
+legend_energy = ROOT.TLegend(0.35, 0.75, 0.65, 0.88)
 legend_energy.AddEntry(hist_gen_energy, "Gen Photon", "l")
 legend_energy.AddEntry(hist_reco_energy, "Reco Photon", "l")
 legend_energy.Draw()
 canvas_energy.SaveAs("hist_energy_gen_vs_reco.png")
 
-# Draw and save overlaid theta histogram
+# Draw and save overlaid theta histogram with error bars
 canvas_theta = ROOT.TCanvas("canvas_theta", "Gen vs Reco Photon Theta", 800, 600)
 hist_gen_theta.SetLineColor(ROOT.kBlue)
 hist_gen_theta.SetLineWidth(2)
 hist_gen_theta.SetTitle("Gen vs Reco Photon Theta")
 hist_gen_theta.GetXaxis().SetTitle("Photon Theta [rad]")
 hist_gen_theta.GetYaxis().SetTitle("Counts")
-hist_gen_theta.Draw("HIST")
+hist_gen_theta.Draw("E")
 hist_reco_theta.SetLineColor(ROOT.kRed)
 hist_reco_theta.SetLineWidth(2)
-hist_reco_theta.Draw("HIST SAME")
-legend_theta = ROOT.TLegend(0.65, 0.75, 0.88, 0.88)
+hist_reco_theta.Draw("E SAME")
+legend_theta = ROOT.TLegend(0.35, 0.75, 0.65, 0.88)
 legend_theta.AddEntry(hist_gen_theta, "Gen Photon", "l")
 legend_theta.AddEntry(hist_reco_theta, "Reco Photon", "l")
 legend_theta.Draw()
 canvas_theta.SaveAs("hist_theta_gen_vs_reco.png")
+
+canvas.Update()
+print(f"Number of entries in TH2:{hist2d.GetEntries()}")
+print(f"Number of entries in gen histo: {hist_gen_theta.GetEntries()}")
+print(f"Number of entries in reco histo: {hist_reco_theta.GetEntries()}")
+
+print(f"Number of entries in gen histo: {hist_gen_energy.GetEntries()}")
+print(f"Number of entries in reco histo: {hist_reco_energy.GetEntries()}")
+print(f"Number of gen photons passing theta cut: {theta_cut_passed}")
+print(f"Number of gen photons NOT passing theta cut: {theta_cut_failed}")
