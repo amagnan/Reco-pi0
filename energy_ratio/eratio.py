@@ -11,7 +11,7 @@ from array import array
 ROOT.gStyle.SetOptStat("eMRuo")
 
 # Open ROOT file and access the tree
-file = ROOT.TFile("miniTree.root")
+file = ROOT.TFile("miniTreeAM_modifEcal2_low.root")
 tree = file.Get("outtree")
 
 # Define vectors for branches
@@ -45,6 +45,7 @@ MASS_WINDOW = 0.05  # 50 MeV mass tolerance
 # Histograms
 hist_ratio_1reco = ROOT.TH1F("ratio_1reco", "Reco / Gen Energy Ratio;Reco Energy / Gen Pair Energy;Events", 50, 0, 1.5)
 hist_ratio_2reco = ROOT.TH1F("ratio_2reco", "Reco / Gen Energy Ratio (2 reco photons);Reco Energy / Gen Pair Energy;Events", 50, 0, 1.5)
+hist_ratio_1to1 = ROOT.TH1F("ratio_1to1", "Reco / Gen Energy Ratio (1-to-1);Reco Energy / Gen Energy;Events", 50, 0, 2)
 
 reco_theta = []
 # Optional histogram for valid ΔR between gen photons
@@ -82,13 +83,18 @@ for i_event in range(tree.GetEntries()):
     for i in range(len(gen_photons)):
         if i in used_gen_indices:
             continue
+        # Energy cut for gen photon i
+        if gen_photons[i].E() < 0.2:
+            continue
         theta1 = gen_photons[i].Theta()
         if theta1 < min_theta or theta1 > max_theta:
             continue
         for j in range(i + 1, len(gen_photons)):
             if j in used_gen_indices:
                 continue
-            
+             #Energy cut for gen photon j
+            if gen_photons[j].E() < 0.2:
+                continue
             theta2 = gen_photons[j].Theta()
             if theta2 < min_theta or theta2 > max_theta:
                 continue
@@ -131,6 +137,8 @@ for i_event in range(tree.GetEntries()):
                     if best_dr < 0.04 and best_reco_idx != -1:
                         matched_reco.append(reco_photons[best_reco_idx])
                         used_reco_indices.add(best_reco_idx)
+                        # Fill 1-to-1 ratio for each matched pair
+                        hist_ratio_1to1.Fill(reco_photons[best_reco_idx].E() / gen_photon.E())
 
                 total_gen_energy = p1.E() + p2.E()
                 if len(matched_reco) == 1:
@@ -155,10 +163,21 @@ hist_ratio_2reco.SetLineWidth(2)
 hist_ratio_2reco.Draw("HIST SAME")
 
 # Legend
-legend = ROOT.TLegend(0.55, 0.70, 0.88, 0.88)
+legend = ROOT.TLegend(0.35, 0.75, 0.65, 0.88)
 legend.AddEntry(hist_ratio_1reco, "1 Reco Photon", "l")
 legend.AddEntry(hist_ratio_2reco, "2 Reco Photons (each)", "l")
 legend.Draw()
 
 canvas.SaveAs("Reco_Gen_Energy_Ratio.png")
+
+# Draw 1-to-1 energy ratio histogram in a separate canvas
+canvas_1to1 = ROOT.TCanvas("canvas_1to1", "Reco / Gen Energy Ratio (1-to-1)", 800, 600)
+hist_ratio_1to1.SetLineColor(ROOT.kBlue + 2)
+hist_ratio_1to1.SetLineWidth(2)
+hist_ratio_1to1.SetTitle("Reco / Gen Energy Ratio (1-to-1)")
+hist_ratio_1to1.GetXaxis().SetTitle("Reco Energy / Gen Energy")
+hist_ratio_1to1.GetYaxis().SetTitle("Events")
+hist_ratio_1to1.Draw("HIST")
+canvas_1to1.SaveAs("Reco_Gen_Energy_Ratio_1to1.png")
+
 print(min_theta, max_theta)
