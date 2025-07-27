@@ -5,8 +5,7 @@ This project investigates the performance of neutral pion (π⁰) reconstruction
 ## 🧪 Overview
 
 - **Simulation**:  
-  The process simulated is \( Z \rightarrow \tau^+ \tau^- \), where subsequent tau decays produce neutral pions:  
-  \( \tau \rightarrow \pi^0 \rightarrow \gamma\gamma \).  
+ The process simulated is $Z \rightarrow \tau^+ \tau^-$, where $\tau \rightarrow \pi^0 \rightarrow \gamma\gamma$. 
   The output of each simulation is stored in a ROOT file containing both generator-level and reconstructed photon information. Each event includes the following structure (sample output from `TTree::Show(1)`):
 ```
 root [3] outtree->Show(1)
@@ -36,22 +35,17 @@ root [3] outtree->Show(1)
  genPi0Pz        = (vector<double>*)0x32b16a0
  genPi0M         = (vector<double>*)0x32c10e0
 ```
+miniTree.root is data with photon energy > 0.1 GeV and cell size 5 x 5mm. The other ROOT files has lower energy cut. File end with modifEcal1 corresponds to cell size 1cm, file end with modifEcal1p5 conrresponds to cell size 1.5x1.5cm, and file end with modifEcal2 corresponds to cell size 2x2cm. There are other simulation outputs with one milion events: https://www.hep.ph.ic.ac.uk/~magnan/miniTree_1M.root and http://wwwae.ciemat.es/~cepeda/FCC/miniTree_1M_22Jul.root. They both simulates cell size 5x5mm, but later one has a lower energy cut.
 
 - **Objective**:  
 Assess the effect of ECAL transverse granularity on π⁰ → γγ reconstruction, with a focus on:
-- Photon-pairing efficiency and invariant mass resolution
-- Photon merging behavior as a function of angular separation (ΔR)
-- Detection thresholds and reconstruction purity
-- Implications for data acquisition (DAQ) rates and channel counts
+-photon matching (gen-level photon and reco-level photon)
+-angular & energy resolution
+-detector threshold behavior
+-energy reconstruction
 
 - **Analysis Strategy**:
-1. Use ROOT to associate generator-level photons and π⁰s with reconstructed photon objects.
-2. Analyze distributions such as:
-   - ΔR between gen-photon and reco-photon
-   - Reconstructed invariant mass of photon pairs
-   - Energy ratios and threshold effects
-   - Number of reco photons vs. π⁰ separation
-3. Visualize key observables using histograms, 2D maps, and profile projections.
+1. In "pi0 mass" 
 
 - **Data**:  
 ROOT files containing simulation outputs for each cell size configuration. The analysis compares reconstruction performance across all four granularity setups.
