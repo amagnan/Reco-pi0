@@ -44,12 +44,25 @@ Assess the effect of ECAL transverse granularity on π⁰ → γγ reconstructio
 -detector threshold behavior
 -energy reconstruction
 
-- **Analysis Strategy**:
-1. In "pi0 mass", events are classified based on the number of gen-level $\pi^0$. In each type of events, the mass of $\pi^0$ is calculated using the invariant mass of two matched reco-level photons, and the distribution of mass and $\Delta R$ between these two photons are plotted.
-2. In "photon_match", the script describe the matching between gen-level photon pair and between gen-level and reco-level photons.
-3. in "nReco vs. gen delta R", the script calcualtes the distribution of the number of reco-photon matched with each gen-photon pair with respect to the $\Delta R$ between the gen-photon pair. With the theoretical calculated min $\Delta R$ resolutions of different cell sizes, it illustrate the granularity on reconstruction.
-4. In "energy_ratio", the scirpt calculate the energy of each reco-photon and total energy of corresponding gen-photon pair with variying granularities. The ratio around one is identified as the case merged photon, since a single reco-photon has similar mass with $\pi^0$.
-5. In "E_threshold", the script investigates the effect of minimum energy for deposition on Si-W cells. From the plot, a clear threshold can be observed.
+- **Analysis Strategy**:Threshold detection behavior
+
+Energy reconstruction performance
+
+Analysis Strategy
+1.`pi0_mass/`:
+Classify events by the number of gen-level π⁰. For each class, compute π⁰ invariant mass from two matched reco-photons and study its distribution along with the corresponding $\Delta R$.
+
+2.`photon_match/`:
+Match gen-level photons (from π⁰ decay) to reco-level photons based on the smallest angular separation, and evaluate matching accuracy.
+
+3.`nReco_vs_gen_dR/`:
+Analyze the number of reco-photons associated with each gen-photon pair as a function of their gen-level $\Delta R$. Overlay theoretical angular resolution limits for different cell sizes.
+
+4.`energy_ratio/`:
+Compare the energy of each reco-photon to the total energy of its corresponding gen-photon pair. A ratio near 1 suggests photon merging (i.e., two photons reconstructed as one).
+
+5.`E_threshold/`:
+Investigate energy deposition thresholds in Si-W cells. Plots reveal a clear onset in detection efficiency tied to cell granularity and material properties.
 
 
 - **Data**:  
