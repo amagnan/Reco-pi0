@@ -45,7 +45,8 @@ Assess the effect of ECAL transverse granularity on π⁰ → γγ reconstructio
 -energy reconstruction
 
 - **Analysis Strategy**:
-1. In "pi0 mass" 
+1. In "pi0 mass", events are classified based on the number of gen-level $\pi^0$. In each type of events, the mass of $\pi^0$ is calculated using the invariant mass of two matched reco-level photons, and the distribution of mass and $\delta R$ between these two photons are plotted.
+2. In "photon_match", the script 
 
 - **Data**:  
 ROOT files containing simulation outputs for each cell size configuration. The analysis compares reconstruction performance across all four granularity setups.
