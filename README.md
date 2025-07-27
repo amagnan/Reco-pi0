@@ -45,8 +45,12 @@ Assess the effect of ECAL transverse granularity on π⁰ → γγ reconstructio
 -energy reconstruction
 
 - **Analysis Strategy**:
-1. In "pi0 mass", events are classified based on the number of gen-level $\pi^0$. In each type of events, the mass of $\pi^0$ is calculated using the invariant mass of two matched reco-level photons, and the distribution of mass and $\delta R$ between these two photons are plotted.
-2. In "photon_match", the script 
+1. In "pi0 mass", events are classified based on the number of gen-level $\pi^0$. In each type of events, the mass of $\pi^0$ is calculated using the invariant mass of two matched reco-level photons, and the distribution of mass and $\Delta R$ between these two photons are plotted.
+2. In "photon_match", the script describe the matching between gen-level photon pair and between gen-level and reco-level photons.
+3. in "nReco vs. gen delta R", the script calcualtes the distribution of the number of reco-photon matched with each gen-photon pair with respect to the $\Delta R$ between the gen-photon pair. With the theoretical calculated min $\Delta R$ resolutions of different cell sizes, it illustrate the granularity on reconstruction.
+4. In "energy_ratio", the scirpt calculate the energy of each reco-photon and total energy of corresponding gen-photon pair with variying granularities. The ratio around one is identified as the case merged photon, since a single reco-photon has similar mass with $\pi^0$.
+5. In "E_threshold", the script investigates the effect of minimum energy for deposition on Si-W cells. From the plot, a clear threshold can be observed.
+
 
 - **Data**:  
 ROOT files containing simulation outputs for each cell size configuration. The analysis compares reconstruction performance across all four granularity setups.
