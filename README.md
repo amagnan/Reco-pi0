@@ -49,6 +49,7 @@ Assess the effect of ECAL transverse granularity on π⁰ → γγ reconstructio
 Energy reconstruction performance
 
 Analysis Strategy
+
 1.`pi0_mass/`:
 Classify events by the number of gen-level π⁰. For each class, compute π⁰ invariant mass from two matched reco-photons and study its distribution along with the corresponding $\Delta R$.
 
@@ -64,9 +65,4 @@ Compare the energy of each reco-photon to the total energy of its corresponding 
 5.`E_threshold/`:
 Investigate energy deposition thresholds in Si-W cells. Plots reveal a clear onset in detection efficiency tied to cell granularity and material properties.
 
-
-- **Data**:  
-ROOT files containing simulation outputs for each cell size configuration. The analysis compares reconstruction performance across all four granularity setups.
-
----
 
