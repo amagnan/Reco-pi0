@@ -36,12 +36,25 @@ root [3] outtree->Show(1)
  genPi0Pz        = (vector<double>*)0x32b16a0
  genPi0M         = (vector<double>*)0x32c10e0
 ```
-  
-The goal is to evaluate how ECAL granularity impacts π⁰ → γγ reconstruction performance, including efficiency, purity, merging effects, and implications for data acquisition (DAQ) requirements. The analysis workflow uses a ROOT-based pipeline to:
 
-- Match reconstructed photons to generator-level photons using angular distance (ΔR)
-- Reconstruct π⁰ candidates from photon pairs
-- Compute observables such as ΔR distributions, invariant mass, energy ratios, and thresholds
-- Produce 2D histograms (e.g., number of reco photons vs. π⁰ ΔR) and profile plots to study detection performance and shower overlap
+- **Objective**:  
+Assess the effect of ECAL transverse granularity on π⁰ → γγ reconstruction, with a focus on:
+- Photon-pairing efficiency and invariant mass resolution
+- Photon merging behavior as a function of angular separation (ΔR)
+- Detection thresholds and reconstruction purity
+- Implications for data acquisition (DAQ) rates and channel counts
 
-This study informs detector optimization by quantifying the trade-offs between calorimeter granularity, photon separation power, and reconstruction reliability.
+- **Analysis Strategy**:
+1. Use ROOT to associate generator-level photons and π⁰s with reconstructed photon objects.
+2. Analyze distributions such as:
+   - ΔR between gen-photon and reco-photon
+   - Reconstructed invariant mass of photon pairs
+   - Energy ratios and threshold effects
+   - Number of reco photons vs. π⁰ separation
+3. Visualize key observables using histograms, 2D maps, and profile projections.
+
+- **Data**:  
+ROOT files containing simulation outputs for each cell size configuration. The analysis compares reconstruction performance across all four granularity setups.
+
+---
+
