@@ -8,7 +8,8 @@ This project investigates the performance of neutral pion (π⁰) reconstruction
   The process simulated is \( Z \rightarrow \tau^+ \tau^- \), where subsequent tau decays produce neutral pions:  
   \( \tau \rightarrow \pi^0 \rightarrow \gamma\gamma \).  
   The output of each simulation is stored in a ROOT file containing both generator-level and reconstructed photon information. Each event includes the following structure (sample output from `TTree::Show(1)`):
-`root [3] outtree->Show(1)
+```
+root [3] outtree->Show(1)
 ======> EVENT:1
  beamE           = 45.5991
  nPhotons        = 0
@@ -33,7 +34,8 @@ This project investigates the performance of neutral pion (π⁰) reconstruction
  genPi0Px        = (vector<double>*)0x3292220
  genPi0Py        = (vector<double>*)0x32a1c60
  genPi0Pz        = (vector<double>*)0x32b16a0
- genPi0M         = (vector<double>*)0x32c10e0`
+ genPi0M         = (vector<double>*)0x32c10e0
+```
   
 The goal is to evaluate how ECAL granularity impacts π⁰ → γγ reconstruction performance, including efficiency, purity, merging effects, and implications for data acquisition (DAQ) requirements. The analysis workflow uses a ROOT-based pipeline to:
 
