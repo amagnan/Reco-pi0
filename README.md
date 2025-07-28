@@ -2,10 +2,10 @@
 
 This project investigates the performance of neutral pion (π⁰) reconstruction in the CLD detector concept for the FCC‑ee, using simulation datasets with varying Si‑W electromagnetic calorimeter (ECAL) cell sizes: 5 mm × 5 mm, 1 cm × 1 cm, 1.5 cm × 1.5 cm, and 2 cm × 2 cm.
 
-## 🧪 Overview
+## Overview
 
 - **Simulation**:  
- The process simulated is $Z \rightarrow \tau^+ \tau^-$, where $\tau \rightarrow \pi^0 \rightarrow \gamma\gamma$. 
+ The process simulated is $Z \rightarrow \tau^+ \tau^-$, where $\tau$ decay generates $\pi^0$, and \pi^0 \rightarrow \gamma\gamma$. 
   The output of each simulation is stored in a ROOT file containing both generator-level and reconstructed photon information. Each event includes the following structure (sample output from `TTree::Show(1)`):
 ```
 root [3] outtree->Show(1)
